@@ -126,17 +126,17 @@ class BertLayer(nn.Module):
     4. a add-norm that takes the output of feed forward layer and the input of feed forward layer
     """
     # multi-head attention w/ self.self_attention
-    self_attention_output = self.self_attention(hidden_states, attention_mask)
+    self_attention_output = self.self_attention(hidden_states, attention_mask) # shape: (batch_size, seq_len, hidden_size) e.g. (2, 8, 768)
 
     # add-norm layer
     hidden_states = self.add_norm(hidden_states, self_attention_output, self.attention_dense, self.attention_dropout, self.attention_layer_norm)
 
     # feed forward
-    feed_forward_output = self.interm_dense(hidden_states)
+    feed_forward_output = self.interm_dense(hidden_states) # shape: (batch_size, seq_len, intermediate_size) e.g. (2, 8, 3072)
     feed_forward_output = self.interm_af(feed_forward_output)
 
     # another add-norm layer
-    hidden_states = self.add_norm(hidden_states, feed_forward_output, self.out_dense, self.out_dropout, self.out_layer_norm)
+    hidden_states = self.add_norm(hidden_states, feed_forward_output, self.out_dense, self.out_dropout, self.out_layer_norm) # shape: (batch_size, seq_len, hidden_size) e.g. (2, 8, 768)
 
     return hidden_states
 
@@ -160,7 +160,7 @@ class BertModel(BertPreTrainedModel):
     self.embed_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
     self.embed_dropout = nn.Dropout(config.hidden_dropout_prob)
     # position_ids (1, len position emb) is a constant, register to buffer
-    position_ids = torch.arange(config.max_position_embeddings).unsqueeze(0)
+    position_ids = torch.arange(config.max_position_embeddings).unsqueeze(0) # shape: (1, max_position_embeddings) e.g. (1, 512)
     self.register_buffer('position_ids', position_ids)
 
     # bert encoder
@@ -173,22 +173,22 @@ class BertModel(BertPreTrainedModel):
     self.init_weights()
 
   def embed(self, input_ids):
-    input_shape = input_ids.size() # shape: (batch_size, seq_len)
+    input_shape = input_ids.size() # shape: (batch_size, seq_len) e.g. (2, 8)
     seq_length = input_shape[1]
 
     # get word embedding from self.word_embedding
-    inputs_embeds = self.word_embedding(input_ids)
+    inputs_embeds = self.word_embedding(input_ids) # shape: (batch_size, seq_len, hidden_size) e.g. (2, 8, 768)
 
     # get position index and position embedding from self.pos_embedding
     pos_ids = self.position_ids[:, :seq_length]
-    pos_embeds = self.pos_embedding(pos_ids)
+    pos_embeds = self.pos_embedding(pos_ids) # shape: (1, seq_len, hidden_size) e.g. (1, 8, 768)
 
     # get token type ids, since we are not consider token type, just a placeholder
     tk_type_ids = torch.zeros(input_shape, dtype=torch.long, device=input_ids.device)
     tk_type_embeds = self.tk_type_embedding(tk_type_ids)
 
     # add three embeddings together
-    embeds = inputs_embeds + tk_type_embeds + pos_embeds
+    embeds = inputs_embeds + tk_type_embeds + pos_embeds # shape: (batch_size, seq_len, hidden_size) e.g. (2, 8, 768)
 
     # layer norm and dropout
     embeds = self.embed_layer_norm(embeds)
