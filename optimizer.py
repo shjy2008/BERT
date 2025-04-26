@@ -1,5 +1,5 @@
 from typing import Callable, Iterable, Tuple
-
+import math
 import torch
 from torch.optim import Optimizer
 
@@ -39,23 +39,43 @@ class AdamW(Optimizer):
                 if grad.is_sparse:
                     raise RuntimeError("Adam does not support sparse gradients, please consider SparseAdam instead")
 
-                raise NotImplementedError()
-
                 # State should be stored in this dictionary
                 state = self.state[p]
+                m_prev = state.get("m_prev", 0)
+                v_prev = state.get("v_prev", 0)
+                t = state.get("t", 1)
 
                 # Access hyperparameters from the `group` dictionary
                 alpha = group["lr"]
+                betas = group["betas"]
+                eps = group["eps"]
+                weight_decay = group["weight_decay"]
+                correct_bias = group["correct_bias"]
 
                 # Update first and second moments of the gradients
+                m_t = betas[0] * m_prev + (1 - betas[0]) * grad
+                v_t = betas[1] * v_prev + (1 - betas[1]) * (grad * grad)
+
 
                 # Bias correction
+                if correct_bias:
+                    m_t = m_t / (1 - betas[0] ** t)
+                    v_t = v_t / (1 - betas[1] ** t)
                 # Please note that we are using the "efficient version" given in
                 # https://arxiv.org/abs/1412.6980
+                alpha_t = alpha * math.sqrt(1 - betas[1] ** t) / (1 - betas[0] ** t)
 
                 # Update parameters
+                p.data = p.data - alpha_t * m_t / (torch.sqrt(v_t) + eps)
 
                 # Add weight decay after the main gradient-based updates.
                 # Please note that the learning rate should be incorporated into this update.
+                if weight_decay != 0:
+                    p.data = p.data - alpha_t * weight_decay * p.data # This is equivalent to adding ((weight_decay/2) * weights^2) to loss function, because the derivative of this formula = weight_decay * weights
+
+                state["m_prev"] = m_t
+                state["v_prev"] = v_t
+                state["t"] = t + 1
+                
 
         return loss
