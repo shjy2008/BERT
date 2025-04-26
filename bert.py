@@ -27,13 +27,13 @@ class BertSelfAttention(nn.Module):
 
   def transform(self, x, linear_layer):
     # the corresponding linear_layer of k, v, q are used to project the hidden_state (x)
-    bs, seq_len = x.shape[:2]
+    bs, seq_len = x.shape[:2] # x.shape: (batch_size, seq_len, dimension)  e.g. (2, 8, 768)
     proj = linear_layer(x)
     # next, we need to produce multiple heads for the proj 
     # this is done by spliting the hidden state to self.num_attention_heads, each of size self.attention_head_size
-    proj = proj.view(bs, seq_len, self.num_attention_heads, self.attention_head_size)
+    proj = proj.view(bs, seq_len, self.num_attention_heads, self.attention_head_size) # e.g. (2, 8, 12, 64)
     # by proper transpose, we have proj of [bs, num_attention_heads, seq_len, attention_head_size]
-    proj = proj.transpose(1, 2)
+    proj = proj.transpose(1, 2) # e.g. (2, 12, 8, 64)
     return proj
 
   def attention(self, key, query, value, attention_mask):
@@ -44,12 +44,30 @@ class BertSelfAttention(nn.Module):
     # before normalizing the scores, use the attention mask to mask out the padding token scores
     # Note again: in the attention_mask non-padding tokens with 0 and padding tokens with a large negative number 
 
-    # normalize the scores
+    # query.shape: (batch_size, num_attn_heads, seq_len, dim) e.g.(2, 12, 8, 64)
+    # key.transpose(-2, -1).shape: (2, 12, 64, 8)
+    S = query @ key.transpose(-2, -1) # QK^T, result shape: (2, 12, 8, 8)
+
+    head_dim = query.shape[-1] # query: (2, 12, 8, 64), head_dim: 64
+    scaling_factor = 1 / math.sqrt(head_dim) # 1/8
+    S = S * scaling_factor
+
+    # add attention_mask, shape: (batch_size, 1, 1, seq_len) e.g.(2, 1, 1, 8)  0 for no mask, -10000 for mask
+    S += attention_mask
+
+    # normalize the scores, apply softmax
+    S = torch.softmax(S, dim = -1) # S.shape: (batch_size, num_attn_heads, seq_len(query), seq_len(key)), dim=-1: apply softmax across the keys
 
     # multiply the attention scores to the value and get back V' 
+    attn_output = S @ value # (2, 12, 8, 8) @ (2, 12, 8, 64) -> (2, 12, 8, 64)
 
     # next, we need to concat multi-heads and recover the original shape [bs, seq_len, num_attention_heads * attention_head_size = hidden_size]
-    raise NotImplementedError
+    attn_output = attn_output.transpose(1, 2) # (2, 12, 8, 64) -> (2, 8, 12, 64)
+    attn_output = attn_output.contiguous() # Put the tensor to a contiguous memory before view()
+    attn_output = attn_output.view(attn_output.size(0), attn_output.size(1), attn_output.size(2) * attn_output.size(3))
+
+    return attn_output
+    
 
   def forward(self, hidden_states, attention_mask):
     """
@@ -91,8 +109,11 @@ class BertLayer(nn.Module):
     ln_layer: layer norm that takes input+sublayer(output) 
     This function computes ``LayerNorm(input + Sublayer(output))``, where sublayer is a dense_layer followed by dropout.
     """
-    # todo
-    raise NotImplementedError
+    hidden_state = dense_layer(output)
+    hidden_state = dropout(hidden_state)
+    hidden_state = input + hidden_state
+    hidden_state = ln_layer(hidden_state)
+    return hidden_state
 
   def forward(self, hidden_states, attention_mask):
     """
@@ -104,17 +125,20 @@ class BertLayer(nn.Module):
     3. a feed forward layer
     4. a add-norm that takes the output of feed forward layer and the input of feed forward layer
     """
-    # todo
     # multi-head attention w/ self.self_attention
+    self_attention_output = self.self_attention(hidden_states, attention_mask)
 
     # add-norm layer
+    hidden_states = self.add_norm(hidden_states, self_attention_output, self.attention_dense, self.attention_dropout, self.attention_layer_norm)
 
     # feed forward
+    feed_forward_output = self.interm_dense(hidden_states)
+    feed_forward_output = self.interm_af(feed_forward_output)
 
     # another add-norm layer
+    hidden_states = self.add_norm(hidden_states, feed_forward_output, self.out_dense, self.out_dropout, self.out_layer_norm)
 
-
-    raise NotImplementedError
+    return hidden_states
 
 
 class BertModel(BertPreTrainedModel):
@@ -149,17 +173,15 @@ class BertModel(BertPreTrainedModel):
     self.init_weights()
 
   def embed(self, input_ids):
-    input_shape = input_ids.size()
+    input_shape = input_ids.size() # shape: (batch_size, seq_len)
     seq_length = input_shape[1]
 
     # get word embedding from self.word_embedding
-    # todo
-    inputs_embeds = None
-
+    inputs_embeds = self.word_embedding(input_ids)
 
     # get position index and position embedding from self.pos_embedding
     pos_ids = self.position_ids[:, :seq_length]
-    pos_embeds = None
+    pos_embeds = self.pos_embedding(pos_ids)
 
     # get token type ids, since we are not consider token type, just a placeholder
     tk_type_ids = torch.zeros(input_shape, dtype=torch.long, device=input_ids.device)
@@ -172,7 +194,7 @@ class BertModel(BertPreTrainedModel):
     embeds = self.embed_layer_norm(embeds)
     embeds = self.embed_dropout(embeds)
 
-    raise NotImplementedError
+    return embeds
 
   def encode(self, hidden_states, attention_mask):
     """
