@@ -43,7 +43,8 @@ class BertSentClassifier(torch.nn.Module):
     def forward(self, input_ids, attention_mask):
         # the final bert contextualize embedding is the hidden state of [CLS] token (the first token)
         bert_outputs = self.bert(input_ids, attention_mask)
-        classifier_outputs = self.classifier_layer(bert_outputs["pooler_output"])
+        logits = self.classifier_layer(bert_outputs["pooler_output"])
+        classifier_outputs = F.log_softmax(logits, dim = 1)
         return classifier_outputs
 
 

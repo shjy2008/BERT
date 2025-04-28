@@ -37,7 +37,7 @@ echo "conda acticate LLM"
 PREF='sst'
 python classifier.py \
     --use_gpu \
-    --option finetune \
+    --option pretrain \
     --lr 1e-5 \
     --seed 1234 \
     --train "data/${PREF}-train.txt" \
