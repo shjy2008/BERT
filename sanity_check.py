@@ -35,7 +35,7 @@ attn_outputs = bert_attn(hidden_states, attention_mask)
 assert torch.allclose(attn_outputs, sanity_data['attn_outputs'], rtol=1e-3, atol=1e-04)
 print("Your BertSelfAttention implementation is correct!")
 
-# 2. BertLayer
+# 3. BertLayer
 layer_outputs = bertlayer(hidden_states, attention_mask)
 assert torch.allclose(layer_outputs, sanity_data['layer_outputs'], rtol=1e-3, atol=1e-04)
 print("Your BertLayer implementation is correct!")
