@@ -58,6 +58,9 @@ class BertSelfAttention(nn.Module):
     # normalize the scores, apply softmax
     S = torch.softmax(S, dim = -1) # S.shape: (batch_size, num_attn_heads, seq_len(query), seq_len(key)), dim=-1: apply softmax across the keys
 
+    # apply dropout after softmax
+    S = self.dropout(S)
+
     # multiply the attention scores to the value and get back V' 
     attn_output = S @ value # (2, 12, 8, 8) @ (2, 12, 8, 64) -> (2, 12, 8, 64)
 
