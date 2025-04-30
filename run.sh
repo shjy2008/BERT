@@ -38,7 +38,10 @@ PREF='sst'
 python classifier.py \
     --use_gpu \
     --option pretrain \
-    --lr 1e-5 \
+    --lr 1e-3 \
+    --epochs 10 \
+    --batch_size 8 \
+    --hidden_dropout_prob 0.3 \
     --seed 1234 \
     --train "data/${PREF}-train.txt" \
     --dev "data/${PREF}-dev.txt" \
