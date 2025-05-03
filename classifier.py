@@ -12,6 +12,12 @@ from bert import BertModel
 from optimizer import AdamW
 from tqdm import tqdm
 
+import nltk
+# nltk.download('punkt_tab')
+# nltk.download('punkt')
+# nltk.download('averaged_perceptron_tagger_eng')
+
+
 #### VLJ: For Task 1, implement functions inside the BertSentClassifier ####
 
 TQDM_DISABLE=True
@@ -40,9 +46,9 @@ class BertSentClassifier(torch.nn.Module):
 
         self.classifier_layer = torch.nn.Linear(config.hidden_size, self.num_labels)
 
-    def forward(self, input_ids, attention_mask):
+    def forward(self, input_ids, attention_mask, POS_tag_ids):
         # the final bert contextualize embedding is the hidden state of [CLS] token (the first token)
-        bert_outputs = self.bert(input_ids, attention_mask)
+        bert_outputs = self.bert(input_ids, attention_mask, POS_tag_ids)
         logits = self.classifier_layer(bert_outputs["pooler_output"])
         classifier_outputs = F.log_softmax(logits, dim = 1)
         return classifier_outputs
@@ -55,13 +61,15 @@ class BertDataset(Dataset):
         self.p = args
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
+        self.POS_tag_to_id = {"PAD": 0}
+
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, idx):
         ele = self.dataset[idx]
         return ele
-
+    
     def pad_data(self, data):
         sents = [x[0] for x in data]
         labels = [x[1] for x in data]
@@ -71,7 +79,57 @@ class BertDataset(Dataset):
         token_type_ids = torch.LongTensor(encoding['token_type_ids'])
         labels = torch.LongTensor(labels)
 
-        return token_ids, token_type_ids, attention_mask, labels, sents
+        # Get POS(part-of-speech) tag ids
+        POS_tag_ids = []
+
+        for sent_index, sent in enumerate(sents):
+            # Split to words (this word count should be smaller than len(input_ids), because tokenizer split into sub-words)
+            words = nltk.word_tokenize(sent)
+            POS_tags = nltk.pos_tag(words)
+
+
+            # Get the tokens(sub-words) from tokenizer
+            tokens = self.tokenizer.convert_ids_to_tokens(encoding['input_ids'][sent_index])
+            current_connected_tokens = ""
+            word_index = 0
+            tags = []
+
+            # Get the POS tag for each token
+            for token in tokens:
+                if token in [self.tokenizer.pad_token, self.tokenizer.cls_token, self.tokenizer.sep_token]:
+                    tags.append("PAD")
+                else:
+                    cleaned_token = token.replace("##", "") # '##ing' -> 'ing'
+                    current_connected_tokens += cleaned_token.lower()
+
+                    tag = None
+                    for i in range(word_index, len(words)):
+                        word = words[i].lower()
+                        if word.startswith(current_connected_tokens):
+                            word_index = i
+                            tag = POS_tags[word_index][1]
+                            if word == current_connected_tokens:
+                                word_index += 1
+                                current_connected_tokens = ""
+                            break
+
+                    if tag == None:
+                        tag = "UNK"
+                        current_connected_tokens = ""
+
+                    tags.append(tag)
+
+            sent_POS_ids = []
+            for tag in tags:
+                if tag not in self.POS_tag_to_id:
+                    self.POS_tag_to_id[tag] = len(self.POS_tag_to_id)
+                sent_POS_ids.append(self.POS_tag_to_id[tag])
+
+            POS_tag_ids.append(sent_POS_ids)
+        
+        POS_tag_ids = torch.tensor(POS_tag_ids)
+
+        return token_ids, token_type_ids, attention_mask, labels, sents, POS_tag_ids
 
     def collate_fn(self, all_data):
         all_data.sort(key=lambda x: -len(x[2]))  # sort by number of tokens
@@ -83,13 +141,14 @@ class BertDataset(Dataset):
             start_idx = i * self.p.batch_size
             data = all_data[start_idx: start_idx + self.p.batch_size]
 
-            token_ids, token_type_ids, attention_mask, labels, sents = self.pad_data(data)
+            token_ids, token_type_ids, attention_mask, labels, sents, POS_tag_ids = self.pad_data(data)
             batches.append({
                 'token_ids': token_ids,
                 'token_type_ids': token_type_ids,
                 'attention_mask': attention_mask,
                 'labels': labels,
                 'sents': sents,
+                'POS_tag_ids': POS_tag_ids,
             })
 
         return batches
@@ -124,13 +183,13 @@ def model_eval(dataloader, model, device):
     y_pred = []
     sents = []
     for step, batch in enumerate(tqdm(dataloader, desc=f'eval', disable=TQDM_DISABLE)):
-        b_ids, b_type_ids, b_mask, b_labels, b_sents = batch[0]['token_ids'], batch[0]['token_type_ids'], \
-                                                       batch[0]['attention_mask'], batch[0]['labels'], batch[0]['sents']
+        b_ids, b_type_ids, b_mask, b_labels, b_sents, b_POS_tag_ids = batch[0]['token_ids'], batch[0]['token_type_ids'], \
+                                                       batch[0]['attention_mask'], batch[0]['labels'], batch[0]['sents'], batch[0]['POS_tag_ids']
 
         b_ids = b_ids.to(device)
         b_mask = b_mask.to(device)
 
-        logits = model(b_ids, b_mask)
+        logits = model(b_ids, b_mask, b_POS_tag_ids)
         logits = logits.detach().cpu().numpy()
         preds = np.argmax(logits, axis=1).flatten()
 
@@ -197,15 +256,15 @@ def train(args):
         train_loss = 0
         num_batches = 0
         for step, batch in enumerate(tqdm(train_dataloader, desc=f'train-{epoch}', disable=TQDM_DISABLE)):
-            b_ids, b_type_ids, b_mask, b_labels, b_sents = batch[0]['token_ids'], batch[0]['token_type_ids'], batch[0][
-                'attention_mask'], batch[0]['labels'], batch[0]['sents']
+            b_ids, b_type_ids, b_mask, b_labels, b_sents, b_POS_tag_ids = batch[0]['token_ids'], batch[0]['token_type_ids'], batch[0][
+                'attention_mask'], batch[0]['labels'], batch[0]['sents'], batch[0]['POS_tag_ids']
 
             b_ids = b_ids.to(device)
             b_mask = b_mask.to(device)
             b_labels = b_labels.to(device)
 
             optimizer.zero_grad()
-            logits = model(b_ids, b_mask)
+            logits = model(b_ids, b_mask, b_POS_tag_ids)
             loss = F.nll_loss(logits, b_labels.view(-1), reduction='sum') / args.batch_size
 
             loss.backward()

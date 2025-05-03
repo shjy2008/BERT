@@ -159,6 +159,9 @@ class BertModel(BertPreTrainedModel):
     # embedding
     self.word_embedding = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
     self.pos_embedding = nn.Embedding(config.max_position_embeddings, config.hidden_size)
+    # POS(Part-of-Speech) tagging
+    num_POS_tags = 50
+    self.POS_tag_embedding = nn.Embedding(num_POS_tags, config.hidden_size)
     self.tk_type_embedding = nn.Embedding(config.type_vocab_size, config.hidden_size)
     self.embed_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
     self.embed_dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -175,7 +178,7 @@ class BertModel(BertPreTrainedModel):
 
     self.init_weights()
 
-  def embed(self, input_ids):
+  def embed(self, input_ids, POS_tag_ids = None):
     input_shape = input_ids.size() # shape: (batch_size, seq_len) e.g. (2, 8)
     seq_length = input_shape[1]
 
@@ -192,6 +195,11 @@ class BertModel(BertPreTrainedModel):
 
     # add three embeddings together
     embeds = inputs_embeds + tk_type_embeds + pos_embeds # shape: (batch_size, seq_len, hidden_size) e.g. (2, 8, 768)
+
+    # POS tag embedding
+    if POS_tag_ids != None:
+      POS_tag_embeds = self.POS_tag_embedding(POS_tag_ids) # (batch_size, seq_len, hidden_size)
+      embeds += POS_tag_embeds
 
     # layer norm and dropout
     embeds = self.embed_layer_norm(embeds)
@@ -216,13 +224,13 @@ class BertModel(BertPreTrainedModel):
 
     return hidden_states
 
-  def forward(self, input_ids, attention_mask):
+  def forward(self, input_ids, attention_mask, POS_tag_ids = None):
     """
     input_ids: [batch_size, seq_len], seq_len is the max length of the batch
     attention_mask: same size as input_ids, 1 represents non-padding tokens, 0 represents padding tokens
     """
     # get the embedding for each input token
-    embedding_output = self.embed(input_ids=input_ids)
+    embedding_output = self.embed(input_ids=input_ids, POS_tag_ids = POS_tag_ids)
 
     # feed to a transformer (a stack of BertLayers)
     sequence_output = self.encode(embedding_output, attention_mask=attention_mask)
