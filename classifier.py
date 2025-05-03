@@ -61,7 +61,7 @@ class BertDataset(Dataset):
         self.p = args
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
-        self.POS_tag_to_id = {"PAD": 0}
+        self.POS_tag_to_id = {"PAD": 0, "UNK": 1}
 
     def __len__(self):
         return len(self.dataset)
@@ -188,6 +188,7 @@ def model_eval(dataloader, model, device):
 
         b_ids = b_ids.to(device)
         b_mask = b_mask.to(device)
+        b_POS_tag_ids = b_POS_tag_ids.to(device)
 
         logits = model(b_ids, b_mask, b_POS_tag_ids)
         logits = logits.detach().cpu().numpy()
@@ -261,6 +262,7 @@ def train(args):
 
             b_ids = b_ids.to(device)
             b_mask = b_mask.to(device)
+            b_POS_tag_ids = b_POS_tag_ids.to(device)
             b_labels = b_labels.to(device)
 
             optimizer.zero_grad()
