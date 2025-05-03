@@ -15,7 +15,7 @@ from tqdm import tqdm
 import nltk
 nltk.download('punkt_tab')
 # nltk.download('punkt')
-# nltk.download('averaged_perceptron_tagger_eng')
+nltk.download('averaged_perceptron_tagger_eng')
 
 
 #### VLJ: For Task 1, implement functions inside the BertSentClassifier ####
