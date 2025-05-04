@@ -47,7 +47,7 @@ python classifier.py \
     --load_existing_model 1 \
     --do_training 0 \
     --seed 1234 \
-    --train "data/${PREF}-train.txt" \
+    --train "data_ext/${PREF}-train-ext1.txt" \
     --dev "data/${PREF}-dev.txt" \
     --test "data/${PREF}-test.txt" \
     --dev_out "${PREF}-dev-output.txt" \

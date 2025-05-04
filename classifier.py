@@ -376,8 +376,8 @@ def get_args():
     parser.add_argument("--train", type=str, default="data/cfimdb-train.txt")
     parser.add_argument("--dev", type=str, default="data/cfimdb-dev.txt")
     parser.add_argument("--test", type=str, default="data/cfimdb-test.txt")
-    parser.add_argument("--load_existing_model", type=int, default=1) # Load existing model or not, if 0, then train from scratch
-    parser.add_argument("--do_training", type=int, default=0) # Do training or not, if 0, then not do training, do test directly
+    parser.add_argument("--load_existing_model", type=int, default=0) # Load existing model or not, if 0, then train from scratch
+    parser.add_argument("--do_training", type=int, default=1) # Do training or not, if 0, then not do training, do test directly
     parser.add_argument("--seed", type=int, default=11711)
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--option", type=str,
