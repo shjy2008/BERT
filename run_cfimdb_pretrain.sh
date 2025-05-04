@@ -42,6 +42,7 @@ python classifier.py \
     --epochs 10 \
     --batch_size 16 \
     --hidden_dropout_prob 0.3 \
+    --POS_tag_enabled true \
     --seed 1234 \
     --train "data/${PREF}-train.txt" \
     --dev "data/${PREF}-dev.txt" \

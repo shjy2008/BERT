@@ -79,55 +79,57 @@ class BertDataset(Dataset):
         token_type_ids = torch.LongTensor(encoding['token_type_ids'])
         labels = torch.LongTensor(labels)
 
-        # Get POS(part-of-speech) tag ids
-        POS_tag_ids = []
+        if self.p.POS_tag_enabled:
+            # Get POS(part-of-speech) tag ids
+            POS_tag_ids = []
 
-        for sent_index, sent in enumerate(sents):
-            # Split to words (this word count should be smaller than len(input_ids), because tokenizer split into sub-words)
-            words = nltk.word_tokenize(sent)
-            POS_tags = nltk.pos_tag(words)
+            for sent_index, sent in enumerate(sents):
+                # Split to words (this word count should be smaller than len(input_ids), because tokenizer split into sub-words)
+                words = nltk.word_tokenize(sent)
+                POS_tags = nltk.pos_tag(words)
 
+                # Get the tokens(sub-words) from tokenizer
+                tokens = self.tokenizer.convert_ids_to_tokens(encoding['input_ids'][sent_index])
+                current_connected_tokens = ""
+                word_index = 0
+                tags = []
 
-            # Get the tokens(sub-words) from tokenizer
-            tokens = self.tokenizer.convert_ids_to_tokens(encoding['input_ids'][sent_index])
-            current_connected_tokens = ""
-            word_index = 0
-            tags = []
+                # Get the POS tag for each token
+                for token in tokens:
+                    if token in [self.tokenizer.pad_token, self.tokenizer.cls_token, self.tokenizer.sep_token]:
+                        tags.append("PAD")
+                    else:
+                        cleaned_token = token.replace("##", "") # '##ing' -> 'ing'
+                        current_connected_tokens += cleaned_token.lower()
 
-            # Get the POS tag for each token
-            for token in tokens:
-                if token in [self.tokenizer.pad_token, self.tokenizer.cls_token, self.tokenizer.sep_token]:
-                    tags.append("PAD")
-                else:
-                    cleaned_token = token.replace("##", "") # '##ing' -> 'ing'
-                    current_connected_tokens += cleaned_token.lower()
+                        tag = None
+                        for i in range(word_index, len(words)):
+                            word = words[i].lower()
+                            if word.startswith(current_connected_tokens):
+                                word_index = i
+                                tag = POS_tags[word_index][1]
+                                if word == current_connected_tokens:
+                                    word_index += 1
+                                    current_connected_tokens = ""
+                                break
 
-                    tag = None
-                    for i in range(word_index, len(words)):
-                        word = words[i].lower()
-                        if word.startswith(current_connected_tokens):
-                            word_index = i
-                            tag = POS_tags[word_index][1]
-                            if word == current_connected_tokens:
-                                word_index += 1
-                                current_connected_tokens = ""
-                            break
+                        if tag == None:
+                            tag = "UNK"
+                            current_connected_tokens = ""
 
-                    if tag == None:
-                        tag = "UNK"
-                        current_connected_tokens = ""
+                        tags.append(tag)
 
-                    tags.append(tag)
+                sent_POS_ids = []
+                for tag in tags:
+                    if tag not in self.POS_tag_to_id:
+                        self.POS_tag_to_id[tag] = len(self.POS_tag_to_id)
+                    sent_POS_ids.append(self.POS_tag_to_id[tag])
 
-            sent_POS_ids = []
-            for tag in tags:
-                if tag not in self.POS_tag_to_id:
-                    self.POS_tag_to_id[tag] = len(self.POS_tag_to_id)
-                sent_POS_ids.append(self.POS_tag_to_id[tag])
-
-            POS_tag_ids.append(sent_POS_ids)
-        
-        POS_tag_ids = torch.tensor(POS_tag_ids)
+                POS_tag_ids.append(sent_POS_ids)
+            
+            POS_tag_ids = torch.tensor(POS_tag_ids)
+        else:
+            POS_tag_ids = None
 
         return token_ids, token_type_ids, attention_mask, labels, sents, POS_tag_ids
 
@@ -188,7 +190,8 @@ def model_eval(dataloader, model, device):
 
         b_ids = b_ids.to(device)
         b_mask = b_mask.to(device)
-        b_POS_tag_ids = b_POS_tag_ids.to(device)
+        if b_POS_tag_ids != None:
+            b_POS_tag_ids = b_POS_tag_ids.to(device)
 
         logits = model(b_ids, b_mask, b_POS_tag_ids)
         logits = logits.detach().cpu().numpy()
@@ -262,7 +265,8 @@ def train(args):
 
             b_ids = b_ids.to(device)
             b_mask = b_mask.to(device)
-            b_POS_tag_ids = b_POS_tag_ids.to(device)
+            if b_POS_tag_ids != None:
+                b_POS_tag_ids = b_POS_tag_ids.to(device)
             b_labels = b_labels.to(device)
 
             optimizer.zero_grad()
@@ -338,6 +342,7 @@ def get_args():
     parser.add_argument("--hidden_dropout_prob", type=float, default=0.3)
     parser.add_argument("--lr", type=float, help="learning rate, default lr for 'pretrain': 1e-3, 'finetune': 1e-5",
                         default=1e-5)
+    parser.add_argument("--POS_tag_enabled", type=bool, default=True)
 
     args = parser.parse_args()
     print(f"args: {vars(args)}")
