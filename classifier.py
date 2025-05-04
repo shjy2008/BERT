@@ -81,7 +81,7 @@ class BertDataset(Dataset):
         token_type_ids = torch.LongTensor(encoding['token_type_ids'])
         labels = torch.LongTensor(labels)
 
-        if self.p.POS_tag_enabled:
+        if self.p.POS_tag_enabled or self.p.dep_tag_enabled:
             # Get POS(part-of-speech) tag ids
             POS_tag_ids = []
             dep_tag_ids = []
@@ -153,8 +153,8 @@ class BertDataset(Dataset):
                     sent_dep_ids.append(self.det_tag_to_id[dep_tag])
                 dep_tag_ids.append(sent_dep_ids)
             
-            POS_tag_ids = torch.tensor(POS_tag_ids)
-            dep_tag_ids = torch.tensor(dep_tag_ids)
+            POS_tag_ids = torch.tensor(POS_tag_ids) if self.p.POS_tag_enabled else None
+            dep_tag_ids = torch.tensor(dep_tag_ids) if self.p.dep_tag_enabled else None
         else:
             POS_tag_ids = None
             dep_tag_ids = None
@@ -378,6 +378,7 @@ def get_args():
     parser.add_argument("--lr", type=float, help="learning rate, default lr for 'pretrain': 1e-3, 'finetune': 1e-5",
                         default=1e-5)
     parser.add_argument("--POS_tag_enabled", type=int, default=1)
+    parser.add_argument("--dep_tag_enabled", type=int, default=1)
 
     args = parser.parse_args()
     print(f"args: {vars(args)}")
