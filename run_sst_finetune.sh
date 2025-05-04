@@ -45,7 +45,7 @@ python classifier.py \
     --POS_tag_enabled 0 \
     --dep_tag_enabled 1 \
     --load_existing_model 1 \
-    --do_training 0 \
+    --do_training 1 \
     --seed 1234 \
     --train "data_ext/${PREF}-train-ext1.txt" \
     --dev "data/${PREF}-dev.txt" \
