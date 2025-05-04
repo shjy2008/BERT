@@ -160,7 +160,7 @@ class BertModel(BertPreTrainedModel):
     self.word_embedding = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=config.pad_token_id)
     self.pos_embedding = nn.Embedding(config.max_position_embeddings, config.hidden_size)
     # POS(Part-of-Speech) tagging
-    num_POS_tags = 100
+    num_POS_tags = 60
     self.POS_tag_embedding = nn.Embedding(num_POS_tags, config.hidden_size)
     self.tk_type_embedding = nn.Embedding(config.type_vocab_size, config.hidden_size)
     self.embed_layer_norm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
