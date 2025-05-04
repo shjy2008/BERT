@@ -42,7 +42,7 @@ python classifier.py \
     --epochs 10 \
     --batch_size 8 \
     --hidden_dropout_prob 0.3 \
-    --POS_tag_enabled 1 \
+    --POS_tag_enabled 0 \
     --dep_tag_enabled 0 \
     --load_existing_model 0 \
     --do_training 1 \
