@@ -12,11 +12,12 @@ from bert import BertModel
 from optimizer import AdamW
 from tqdm import tqdm
 
-import nltk
-nltk.download('punkt_tab')
-# nltk.download('punkt')
-nltk.download('averaged_perceptron_tagger_eng')
+# import nltk
+# nltk.download('punkt_tab')
+# nltk.download('averaged_perceptron_tagger_eng')
 
+import spacy
+nlp = spacy.load("en_core_web_sm") # Load the pre-trained spaCy model
 
 #### VLJ: For Task 1, implement functions inside the BertSentClassifier ####
 
@@ -85,8 +86,12 @@ class BertDataset(Dataset):
 
             for sent_index, sent in enumerate(sents):
                 # Split to words (this word count should be smaller than len(input_ids), because tokenizer split into sub-words)
-                words = nltk.word_tokenize(sent)
-                POS_tags = nltk.pos_tag(words)
+                # words = nltk.word_tokenize(sent)
+                # POS_tags = nltk.pos_tag(words)
+
+                nlp_words = nlp(sent)
+                words = [nlp_word.text for nlp_word in nlp_words]
+                POS_tags = [(nlp_word.text, nlp_word.pos_) for nlp_word in nlp_words]
 
                 # Get the tokens(sub-words) from tokenizer
                 tokens = self.tokenizer.convert_ids_to_tokens(encoding['input_ids'][sent_index])
