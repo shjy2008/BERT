@@ -92,7 +92,7 @@ class BertDataset(Dataset):
                 nlp_words = nlp(sent)
                 words = [nlp_word.text for nlp_word in nlp_words]
                 # POS_tags = [(nlp_word.text, nlp_word.pos_) for nlp_word in nlp_words] # Coarse-grained POS tag: .pos_  e.g. NOUN, VERB, ADJ, DET, PROPN
-                POS_tags = [(nlp_word.text, nlp_word.tag_) for nlp_word in nlp_words] # Fine-grained POS tag: .tag_
+                POS_tags = [(nlp_word.text, nlp_word.tag_) for nlp_word in nlp_words] # Fine-grained POS tag: .tag_  e.g. NN, NNS, VB, VBD, VBG, JJ, JJR
 
                 # Get the tokens(sub-words) from tokenizer
                 tokens = self.tokenizer.convert_ids_to_tokens(encoding['input_ids'][sent_index])
