@@ -43,11 +43,11 @@ python classifier.py \
     --batch_size 8 \
     --hidden_dropout_prob 0.3 \
     --POS_tag_enabled 0 \
-    --dep_tag_enabled 1 \
-    --load_existing_model 1 \
+    --dep_tag_enabled 0 \
+    --load_existing_model 0 \
     --do_training 1 \
     --seed 1234 \
-    --train "data_ext/${PREF}-train-ext1.txt" \
+    --train "data/${PREF}-train.txt" \
     --dev "data/${PREF}-dev.txt" \
     --test "data/${PREF}-test.txt" \
     --dev_out "${PREF}-dev-output.txt" \
