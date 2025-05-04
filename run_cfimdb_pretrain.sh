@@ -40,7 +40,7 @@ python classifier.py \
     --option pretrain \
     --lr 1e-3 \
     --epochs 10 \
-    --batch_size 16 \
+    --batch_size 8 \
     --hidden_dropout_prob 0.3 \
     --POS_tag_enabled true \
     --seed 1234 \
