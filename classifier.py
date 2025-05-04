@@ -13,8 +13,14 @@ from optimizer import AdamW
 from tqdm import tqdm
 
 # import nltk
-# nltk.download('punkt_tab')
-# nltk.download('averaged_perceptron_tagger_eng')
+# # nltk.download('punkt_tab') # For POS(Part-of-Speech) Tagging
+# # nltk.download('averaged_perceptron_tagger_eng') # For POS Tagging
+# nltk.download('wordnet') # For WordNet (similar words)
+
+# from nltk.corpus import wordnet as wn
+
+# synsets = wn.synsets("pleasure")
+
 
 import spacy
 nlp = spacy.load("en_core_web_sm") # Load the pre-trained spaCy model
@@ -268,17 +274,25 @@ def train(args):
     dev_dataloader = DataLoader(dev_dataset, shuffle=False, batch_size=args.batch_size,
                                 collate_fn=dev_dataset.collate_fn)
 
-    #### Init model
-    config = {'hidden_dropout_prob': args.hidden_dropout_prob,
-              'num_labels': num_labels,
-              'hidden_size': 768,
-              'data_dir': '.',
-              'option': args.option}
-
-    config = SimpleNamespace(**config)
-
     # initialize the Senetence Classification Model
-    model = BertSentClassifier(config)
+    if args.load_existing_model:
+        saved = torch.load(args.filepath, weights_only=False)
+        config = saved['model_config']
+        model = BertSentClassifier(config)
+        model.load_state_dict(saved['model'])
+        print(f"load model from {args.filepath}")
+    else:
+        #### Init model
+        config = {'hidden_dropout_prob': args.hidden_dropout_prob,
+                'num_labels': num_labels,
+                'hidden_size': 768,
+                'data_dir': '.',
+                'option': args.option}
+
+        config = SimpleNamespace(**config)
+        model = BertSentClassifier(config)
+        print(f"Train model from scratch. config: {config}")
+
     model = model.to(device)
 
     lr = args.lr
@@ -362,6 +376,8 @@ def get_args():
     parser.add_argument("--train", type=str, default="data/cfimdb-train.txt")
     parser.add_argument("--dev", type=str, default="data/cfimdb-dev.txt")
     parser.add_argument("--test", type=str, default="data/cfimdb-test.txt")
+    parser.add_argument("--load_existing_model", type=int, default=1) # Load existing model or not, if 0, then train from scratch
+    parser.add_argument("--do_training", type=int, default=0) # Do training or not, if 0, then not do training, do test directly
     parser.add_argument("--seed", type=int, default=11711)
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--option", type=str,
@@ -378,7 +394,7 @@ def get_args():
     parser.add_argument("--lr", type=float, help="learning rate, default lr for 'pretrain': 1e-3, 'finetune': 1e-5",
                         default=1e-5)
     parser.add_argument("--POS_tag_enabled", type=int, default=1)
-    parser.add_argument("--dep_tag_enabled", type=int, default=1)
+    parser.add_argument("--dep_tag_enabled", type=int, default=0)
 
     args = parser.parse_args()
     print(f"args: {vars(args)}")
@@ -389,5 +405,6 @@ if __name__ == "__main__":
     if args.filepath is None:
         args.filepath = f'{args.option}-{args.epochs}-{args.lr}.pt' # save path
     seed_everything(args.seed)  # fix the seed for reproducibility
-    train(args)
+    if args.do_training:
+        train(args)
     test(args)

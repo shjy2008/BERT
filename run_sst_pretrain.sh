@@ -44,6 +44,8 @@ python classifier.py \
     --hidden_dropout_prob 0.3 \
     --POS_tag_enabled 0 \
     --dep_tag_enabled 1 \
+    --load_existing_model 1 \
+    --do_training 0 \
     --seed 1234 \
     --train "data/${PREF}-train.txt" \
     --dev "data/${PREF}-dev.txt" \
