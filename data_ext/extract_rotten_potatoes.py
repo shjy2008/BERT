@@ -3,7 +3,7 @@ import csv
 read_file = './data_ext/rotten_tomatoes_critic_reviews.csv' # Source: https://www.kaggle.com/datasets/stefanoleone992/rotten-tomatoes-movies-and-critic-reviews-dataset
 write_file = './data_ext/sst-train-ext3.txt'
 
-max_extract_data = 10000
+max_extract_data = 50000
 num_labels = 5
 each_label_data_count = max_extract_data / num_labels
 
