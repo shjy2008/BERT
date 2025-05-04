@@ -1,6 +1,6 @@
 import json
 
-read_file = './new_data/Movies_and_TV_5.json'
+read_file = './new_data/Movies_and_TV_5.json' # Source: https://amazon-reviews-2023.github.io/ Movies_and_TV
 write_file = './new_data/sst-train-ext1.txt'
 
 max_extract_data = 2000

@@ -27,7 +27,7 @@ nlp = spacy.load("en_core_web_sm") # Load the pre-trained spaCy model
 
 #### VLJ: For Task 1, implement functions inside the BertSentClassifier ####
 
-TQDM_DISABLE=True
+TQDM_DISABLE=False
 # fix the random seed
 def seed_everything(seed=11711):
     random.seed(seed)
