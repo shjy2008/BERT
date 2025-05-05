@@ -24,6 +24,9 @@ with open(read_file, 'r') as f_dataset:
             text = d.get('reviewText')
             if not text:
                 continue
+            
+            if len(text) > 300: # Because sst-test.txt all < 300 (max 263)
+                continue
 
             # Ensure each label the same number of samples
             if rate_to_count.get(rate, 0) >= each_label_data_count:
