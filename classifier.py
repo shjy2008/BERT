@@ -346,6 +346,9 @@ def train(args):
 
 
 def test(args):
+    if not os.path.exists(args.filepath):
+        print(f"in test: filepath {args.filepath} not exists, return.")
+        return
     with torch.no_grad():
         device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
         saved = torch.load(args.filepath, weights_only=False)
