@@ -274,6 +274,8 @@ def train(args):
     dev_dataloader = DataLoader(dev_dataset, shuffle=False, batch_size=args.batch_size,
                                 collate_fn=dev_dataset.collate_fn)
 
+    best_dev_acc = 0
+
     # initialize the Senetence Classification Model
     if args.load_existing_model:
         saved = torch.load(args.filepath, weights_only=False)
@@ -281,6 +283,10 @@ def train(args):
         model = BertSentClassifier(config)
         model.load_state_dict(saved['model'])
         print(f"load model from {args.filepath}")
+        
+        dev_acc, dev_f1, *_ = model_eval(dev_dataloader, model, device)
+        print("prev model dev accuracy: ", dev_acc)
+        best_dev_acc = dev_acc
     else:
         #### Init model
         config = {'hidden_dropout_prob': args.hidden_dropout_prob,
@@ -298,7 +304,6 @@ def train(args):
     lr = args.lr
     ## specify the optimizer
     optimizer = AdamW(model.parameters(), lr=lr)
-    best_dev_acc = 0
 
     ## run for the specified number of epochs
     for epoch in range(args.epochs):
