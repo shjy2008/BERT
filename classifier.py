@@ -236,6 +236,7 @@ def model_eval(dataloader, model, device):
         logits = logits.detach().cpu().numpy()
         # preds = np.argmax(logits, axis=1).flatten()
         preds = np.clip(np.round(logits), 0, 4)
+        preds = preds.flatten()
 
         b_labels = b_labels.flatten()
         y_true.extend(b_labels)
@@ -328,7 +329,7 @@ def train(args):
             optimizer.zero_grad()
             logits = model(b_ids, b_mask, b_POS_tag_ids, b_dep_tag_ids)
             # loss = F.nll_loss(logits, b_labels.view(-1), reduction='sum') / args.batch_size
-            loss = F.mse_loss(logits.squeeze(), b_labels.view(-1).float())
+            loss = F.mse_loss(logits.view(-1), b_labels.view(-1).float())
 
             loss.backward()
             optimizer.step()
