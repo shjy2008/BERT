@@ -51,14 +51,15 @@ class BertSentClassifier(torch.nn.Module):
             elif config.option == 'finetune':
                 param.requires_grad = True
 
-        self.classifier_layer = torch.nn.Linear(config.hidden_size, self.num_labels)
+        self.classifier_layer = torch.nn.Linear(config.hidden_size, 1) # Map to only 1 float number (0-1), can map to 0/1, or 0/1/2/3/4
 
     def forward(self, input_ids, attention_mask, POS_tag_ids, dep_tag_ids):
         # the final bert contextualize embedding is the hidden state of [CLS] token (the first token)
         bert_outputs = self.bert(input_ids, attention_mask, POS_tag_ids, dep_tag_ids)
         logits = self.classifier_layer(bert_outputs["pooler_output"])
-        classifier_outputs = F.log_softmax(logits, dim = 1)
-        return classifier_outputs
+        # classifier_outputs = F.log_softmax(logits, dim = 1)
+        # logits = F.sigmoid(logits)
+        return logits
 
 
 # create a custom Dataset Class to be used for the dataloader
@@ -233,7 +234,8 @@ def model_eval(dataloader, model, device):
 
         logits = model(b_ids, b_mask, b_POS_tag_ids, b_dep_tag_ids)
         logits = logits.detach().cpu().numpy()
-        preds = np.argmax(logits, axis=1).flatten()
+        # preds = np.argmax(logits, axis=1).flatten()
+        preds = np.clip(np.round(logits), 0, 4)
 
         b_labels = b_labels.flatten()
         y_true.extend(b_labels)
@@ -325,7 +327,8 @@ def train(args):
 
             optimizer.zero_grad()
             logits = model(b_ids, b_mask, b_POS_tag_ids, b_dep_tag_ids)
-            loss = F.nll_loss(logits, b_labels.view(-1), reduction='sum') / args.batch_size
+            # loss = F.nll_loss(logits, b_labels.view(-1), reduction='sum') / args.batch_size
+            loss = F.mse_loss(logits.squeeze(), b_labels.view(-1).float())
 
             loss.backward()
             optimizer.step()
@@ -381,9 +384,9 @@ def test(args):
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train", type=str, default="data/cfimdb-train.txt")
-    parser.add_argument("--dev", type=str, default="data/cfimdb-dev.txt")
-    parser.add_argument("--test", type=str, default="data/cfimdb-test.txt")
+    parser.add_argument("--train", type=str, default="data/sst-train.txt")
+    parser.add_argument("--dev", type=str, default="data/sst-dev.txt")
+    parser.add_argument("--test", type=str, default="data/sst-test.txt")
     parser.add_argument("--load_existing_model", type=int, default=0) # Load existing model or not, if 0, then train from scratch
     parser.add_argument("--do_training", type=int, default=1) # Do training or not, if 0, then not do training, do test directly
     parser.add_argument("--seed", type=int, default=11711)
