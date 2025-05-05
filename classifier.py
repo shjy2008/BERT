@@ -262,7 +262,7 @@ def save_model(model, optimizer, args, config, filepath):
     print(f"save the model to {filepath}")
 
 def train(args):
-    device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
+    device = torch.device('cuda') if (args.use_gpu and torch.cuda.is_available()) else torch.device('cpu')
     #### Load data
     # create the data and its corresponding datasets and dataloader
     train_data, num_labels = create_data(args.train, 'train')
@@ -280,7 +280,7 @@ def train(args):
 
     # initialize the Senetence Classification Model
     if args.load_existing_model:
-        saved = torch.load(args.filepath, weights_only=False)
+        saved = torch.load(args.filepath, weights_only=False, map_location=device)
         config = saved['model_config']
         model = BertSentClassifier(config)
         model.load_state_dict(saved['model'])
@@ -353,8 +353,8 @@ def test(args):
         print(f"in test: filepath {args.filepath} not exists, return.")
         return
     with torch.no_grad():
-        device = torch.device('cuda') if args.use_gpu else torch.device('cpu')
-        saved = torch.load(args.filepath, weights_only=False)
+        device = torch.device('cuda') if (args.use_gpu and torch.cuda.is_available()) else torch.device('cpu')
+        saved = torch.load(args.filepath, weights_only=False, map_location = device)
         config = saved['model_config']
         model = BertSentClassifier(config)
         model.load_state_dict(saved['model'])
@@ -387,13 +387,13 @@ def get_args():
     parser.add_argument("--train", type=str, default="data/sst-train.txt")
     parser.add_argument("--dev", type=str, default="data/sst-dev.txt")
     parser.add_argument("--test", type=str, default="data/sst-test.txt")
-    parser.add_argument("--load_existing_model", type=int, default=0) # Load existing model or not, if 0, then train from scratch
+    parser.add_argument("--load_existing_model", type=int, default=1) # Load existing model or not, if 0, then train from scratch
     parser.add_argument("--do_training", type=int, default=1) # Do training or not, if 0, then not do training, do test directly
     parser.add_argument("--seed", type=int, default=11711)
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--option", type=str,
                         help='pretrain: the BERT parameters are frozen; finetune: BERT parameters are updated',
-                        choices=('pretrain', 'finetune'), default="pretrain")
+                        choices=('pretrain', 'finetune'), default="finetune")
     parser.add_argument("--use_gpu", action='store_true')
     parser.add_argument("--dev_out", type=str, default="cfimdb-dev-output.txt")
     parser.add_argument("--test_out", type=str, default="cfimdb-test-output.txt")
@@ -414,7 +414,8 @@ def get_args():
 if __name__ == "__main__":
     args = get_args()
     if args.filepath is None:
-        args.filepath = f'{args.option}-{args.epochs}-{args.lr}.pt' # save path
+        #args.filepath = f'{args.option}-{args.epochs}-{args.lr}.pt' # save path
+        args.filepath = f'sst-{args.option}-model.pt'
     seed_everything(args.seed)  # fix the seed for reproducibility
 
     if args.load_existing_model:
@@ -425,5 +426,5 @@ if __name__ == "__main__":
     if args.do_training:
         train(args)
     print("---finish training---")
-    
+
     test(args)
