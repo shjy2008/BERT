@@ -284,6 +284,7 @@ def train(args):
         config = saved['model_config']
         model = BertSentClassifier(config)
         model.load_state_dict(saved['model'])
+        model = model.to(device)
         print(f"load model from {args.filepath}")
         
         dev_acc, dev_f1, *_ = model_eval(dev_dataloader, model, device)
@@ -299,9 +300,8 @@ def train(args):
 
         config = SimpleNamespace(**config)
         model = BertSentClassifier(config)
+        model = model.to(device)
         print(f"Train model from scratch. config: {config}")
-
-    model = model.to(device)
 
     lr = args.lr
     ## specify the optimizer
