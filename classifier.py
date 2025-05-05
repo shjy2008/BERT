@@ -416,10 +416,14 @@ if __name__ == "__main__":
     if args.filepath is None:
         args.filepath = f'{args.option}-{args.epochs}-{args.lr}.pt' # save path
     seed_everything(args.seed)  # fix the seed for reproducibility
-    print("---test before training---")
-    test(args)
+
+    if args.load_existing_model:
+        print("---test before training---")
+        test(args)
+
     print("---start training---")
     if args.do_training:
         train(args)
     print("---finish training---")
+    
     test(args)
