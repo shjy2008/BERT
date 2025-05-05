@@ -3,7 +3,7 @@ import json
 read_file = './data_ext/Movies_and_TV_5.json' # Source: https://amazon-reviews-2023.github.io/ Movies_and_TV
 write_file = './data_ext/sst-train-ext1.txt'
 
-max_extract_data = 50000
+max_extract_data = 10000
 num_labels = 5
 each_label_data_count = max_extract_data / num_labels
 

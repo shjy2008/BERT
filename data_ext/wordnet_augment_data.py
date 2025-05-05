@@ -50,7 +50,7 @@ def get_new_sentences(sent):
         return []
 
     new_sentences = []
-    for _ in range(2):
+    for _ in range(1):
         replace_count = len(candidate_indices) // 2 + 1 # replace half the candidates + 1
         replace_indices = random.sample(candidate_indices, replace_count)
         # new_tokens = tokens.copy()
