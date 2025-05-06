@@ -51,14 +51,14 @@ class BertSentClassifier(torch.nn.Module):
             elif config.option == 'finetune':
                 param.requires_grad = True
 
-        self.classifier_layer = torch.nn.Linear(config.hidden_size, 1) # Map to only 1 float number (0-1), can map to 0/1, or 0/1/2/3/4
+        self.classifier_layer = torch.nn.Linear(config.hidden_size, self.num_labels) # Map to only 1 float number (0-1), can map to 0/1, or 0/1/2/3/4
 
     def forward(self, input_ids, attention_mask, POS_tag_ids, dep_tag_ids):
         # the final bert contextualize embedding is the hidden state of [CLS] token (the first token)
         bert_outputs = self.bert(input_ids, attention_mask, POS_tag_ids, dep_tag_ids)
         logits = self.classifier_layer(bert_outputs["pooler_output"])
-        # classifier_outputs = F.log_softmax(logits, dim = 1)
-        logits = F.sigmoid(logits) * (self.num_labels - 1)
+        # logits = F.sigmoid(logits) * (self.num_labels - 1)
+        logits = F.log_softmax(logits, dim = 1)
         return logits
 
 
@@ -234,8 +234,8 @@ def model_eval(dataloader, model, device):
 
         logits = model(b_ids, b_mask, b_POS_tag_ids, b_dep_tag_ids)
         logits = logits.detach().cpu().numpy()
-        # preds = np.argmax(logits, axis=1).flatten()
-        preds = np.clip(np.round(logits), 0, 4)
+        preds = np.argmax(logits, axis=1).flatten()
+        # preds = np.clip(np.round(logits), 0, 4)
         preds = preds.flatten()
 
         b_labels = b_labels.flatten()
@@ -328,8 +328,8 @@ def train(args):
 
             optimizer.zero_grad()
             logits = model(b_ids, b_mask, b_POS_tag_ids, b_dep_tag_ids)
-            # loss = F.nll_loss(logits, b_labels.view(-1), reduction='sum') / args.batch_size
-            loss = F.mse_loss(logits.view(-1), b_labels.view(-1).float())
+            loss = F.nll_loss(logits, b_labels.view(-1), reduction='sum') / args.batch_size
+            # loss = F.mse_loss(logits.view(-1), b_labels.view(-1).float())
 
             loss.backward()
             optimizer.step()
