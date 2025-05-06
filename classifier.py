@@ -58,7 +58,7 @@ class BertSentClassifier(torch.nn.Module):
         bert_outputs = self.bert(input_ids, attention_mask, POS_tag_ids, dep_tag_ids)
         logits = self.classifier_layer(bert_outputs["pooler_output"])
         # classifier_outputs = F.log_softmax(logits, dim = 1)
-        # logits = F.sigmoid(logits)
+        logits = F.sigmoid(logits) * (self.num_labels - 1)
         return logits
 
 
@@ -280,7 +280,7 @@ def train(args):
     best_dev_acc = 0
 
     # initialize the Senetence Classification Model
-    if args.load_existing_model:
+    if args.load_existing_model and os.path.exists(args.filepath):
         saved = torch.load(args.filepath, weights_only=False, map_location=device)
         config = saved['model_config']
         model = BertSentClassifier(config)
@@ -406,7 +406,7 @@ def get_args():
     parser.add_argument("--lr", type=float, help="learning rate, default lr for 'pretrain': 1e-3, 'finetune': 1e-5",
                         default=1e-5)
     parser.add_argument("--weight_decay", type=float, default=1e-5)
-    parser.add_argument("--POS_tag_enabled", type=int, default=1)
+    parser.add_argument("--POS_tag_enabled", type=int, default=0)
     parser.add_argument("--dep_tag_enabled", type=int, default=0)
 
     args = parser.parse_args()
