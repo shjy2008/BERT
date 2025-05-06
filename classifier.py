@@ -245,13 +245,14 @@ def model_eval(dataloader, model, device, args):
             b_dep_tag_ids = b_dep_tag_ids.to(device)
 
         logits = model(b_ids, b_mask, b_POS_tag_ids, b_dep_tag_ids)
-        logits = logits.detach().cpu().numpy()
         if args.use_MSE_loss:
+            logits = logits.detach().cpu().numpy()
             preds = np.clip(np.round(logits).astype(int), 0, 4).flatten()
         elif args.use_CORAL_loss:
             probs = torch.sigmoid(logits)
-            preds = torch.sum(probs > 0.5, dim=1)
+            preds = torch.sum(probs > 0.5, dim=1).cpu().numpy()
         else:
+            logits = logits.detach().cpu().numpy()
             preds = np.argmax(logits, axis=1).flatten()
 
         b_labels = b_labels.flatten()
@@ -278,16 +279,15 @@ def save_model(model, optimizer, args, config, filepath):
     torch.save(save_info, filepath)
     print(f"save the model to {filepath}")
 
+# CORAL (Cumulative Ordinal Regression Loss)
 def coral_loss(logits, targets, num_classes=5):
-    # Create extended targets for each threshold
-    # If class is 3, then thresholds 0, 1, 2 are 1 (True) and 3, 4 are 0 (False)
-    levels = targets.size(0)
-    extended_targets = torch.zeros(levels, num_classes-1).to(targets.device)
+    batch_size = targets.size(0)
+    extended_targets = torch.zeros(batch_size, num_classes-1).to(targets.device) # [[0, 0, 0, 0], [0, 0, 0, 0], ...]
     
-    for i in range(levels):
+    for i in range(batch_size):
         for j in range(num_classes-1):
-            if targets[i] > j:  # If target class > threshold
-                extended_targets[i, j] = 1
+            if targets[i] > j:
+                extended_targets[i, j] = 1 # Create something like: # [[1, 1, 1, 1], [1, 1, 0, 0], ...]
     
     # Binary cross entropy for each threshold
     loss = F.binary_cross_entropy_with_logits(
