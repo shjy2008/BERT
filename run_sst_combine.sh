@@ -39,14 +39,14 @@ python classifier.py \
     --use_gpu \
     --option finetune \
     --lr 1e-5 \
-    --epochs 10 \
+    --epochs 3 \
     --batch_size 8 \
     --hidden_dropout_prob 0.3 \
     --weight_decay 0 \
     --POS_tag_enabled 0 \
     --dep_tag_enabled 0 \
     --use_MSE_loss 0 \
-    --use_CORAL_loss 0 \
+    --use_CORAL_loss 1 \
     --use_shceduler 0 \
     --load_existing_model 0 \
     --do_training 1 \
