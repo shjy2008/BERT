@@ -65,10 +65,11 @@ class BertSentClassifier(torch.nn.Module):
         bert_outputs = self.bert(input_ids, attention_mask, POS_tag_ids, dep_tag_ids)
         logits = self.classifier_layer(bert_outputs["pooler_output"])
         if self.config.use_MSE_loss:
-            logits = F.sigmoid(logits) * (self.num_labels - 1) # <0.125:0  <0.375:1  <0.625:2  < 0.875:3  >0.875:4
+            # logits = F.sigmoid(logits) * (self.num_labels - 1) # <0.125:0  <0.375:1  <0.625:2  < 0.875:3  >0.875:4
+            return logits
         else:
             logits = F.log_softmax(logits, dim = 1)
-        return logits
+            return logits
 
 
 # create a custom Dataset Class to be used for the dataloader
