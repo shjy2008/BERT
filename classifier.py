@@ -6,6 +6,8 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import classification_report, f1_score, recall_score, accuracy_score
 
+import transformers
+
 # change it with respect to the original model
 from tokenizer import BertTokenizer
 from bert import BertModel
@@ -317,6 +319,12 @@ def train(args):
     ## specify the optimizer
     optimizer = AdamW(model.parameters(), lr=lr, weight_decay=args.weight_decay)
 
+    # Scheduler with warmup
+    num_training_steps = args.epochs * len(train_dataloader)
+    num_warmup_steps = int(0.1 * num_training_steps)
+
+    lr_scheduler = transformers.get_scheduler(name="linear", optimizer=optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=num_training_steps)
+
     ## run for the specified number of epochs
     for epoch in range(args.epochs):
         model.train()
@@ -344,6 +352,7 @@ def train(args):
 
             loss.backward()
             optimizer.step()
+            lr_scheduler.step()
 
             train_loss += loss.item()
             num_batches += 1
