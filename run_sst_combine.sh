@@ -45,6 +45,7 @@ python classifier.py \
     --weight_decay 0 \
     --POS_tag_enabled 0 \
     --dep_tag_enabled 0 \
+    --use_MSE_loss 0 \
     --load_existing_model 0 \
     --do_training 1 \
     --seed 1234 \

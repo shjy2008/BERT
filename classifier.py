@@ -43,6 +43,7 @@ class BertSentClassifier(torch.nn.Module):
         super(BertSentClassifier, self).__init__()
         self.num_labels = config.num_labels
         self.bert = BertModel.from_pretrained('bert-base-uncased')
+        self.config = config
 
         # pretrain mode does not require updating bert paramters.
         for param in self.bert.parameters():
@@ -51,14 +52,20 @@ class BertSentClassifier(torch.nn.Module):
             elif config.option == 'finetune':
                 param.requires_grad = True
 
-        self.classifier_layer = torch.nn.Linear(config.hidden_size, self.num_labels) # Map to only 1 float number (0-1), can map to 0/1, or 0/1/2/3/4
+        if config.use_MSE_loss:
+            num_output = 1 # Map to only 1 float number (0-1), can map to 0/1, or 0/1/2/3/4
+        else:
+            num_output = self.num_labels
+        self.classifier_layer = torch.nn.Linear(config.hidden_size, num_output) 
 
     def forward(self, input_ids, attention_mask, POS_tag_ids, dep_tag_ids):
         # the final bert contextualize embedding is the hidden state of [CLS] token (the first token)
         bert_outputs = self.bert(input_ids, attention_mask, POS_tag_ids, dep_tag_ids)
         logits = self.classifier_layer(bert_outputs["pooler_output"])
-        logits = F.sigmoid(logits) * (self.num_labels - 1) # <0.125:0  <0.375:1  <0.625:2  < 0.875:3  >0.875:4
-        # logits = F.log_softmax(logits, dim = 1)
+        if self.config.use_MSE_loss:
+            logits = F.sigmoid(logits) * (self.num_labels - 1) # <0.125:0  <0.375:1  <0.625:2  < 0.875:3  >0.875:4
+        else:
+            logits = F.log_softmax(logits, dim = 1)
         return logits
 
 
@@ -215,7 +222,7 @@ def create_data(filename, flag='train'):
         return data
 
 # perform model evaluation in terms of the accuracy and f1 score.
-def model_eval(dataloader, model, device):
+def model_eval(dataloader, model, device, args):
     model.eval() # switch to eval model, will turn off randomness like dropout
     y_true = []
     y_pred = []
@@ -234,9 +241,10 @@ def model_eval(dataloader, model, device):
 
         logits = model(b_ids, b_mask, b_POS_tag_ids, b_dep_tag_ids)
         logits = logits.detach().cpu().numpy()
-        # preds = np.argmax(logits, axis=1).flatten()
-        preds = np.clip(np.round(logits).astype(int), 0, 4)
-        preds = preds.flatten()
+        if args.use_MSE_loss:
+            preds = np.clip(np.round(logits).astype(int), 0, 4).flatten()
+        else:
+            preds = np.argmax(logits, axis=1).flatten()
 
         b_labels = b_labels.flatten()
         y_true.extend(b_labels)
@@ -288,7 +296,7 @@ def train(args):
         model = model.to(device)
         print(f"load model from {args.filepath}")
         
-        dev_acc, dev_f1, *_ = model_eval(dev_dataloader, model, device)
+        dev_acc, dev_f1, *_ = model_eval(dev_dataloader, model, device, args)
         print("prev model dev accuracy: ", dev_acc)
         best_dev_acc = dev_acc
     else:
@@ -328,8 +336,10 @@ def train(args):
 
             optimizer.zero_grad()
             logits = model(b_ids, b_mask, b_POS_tag_ids, b_dep_tag_ids)
-            # loss = F.nll_loss(logits, b_labels.view(-1), reduction='sum') / args.batch_size
-            loss = F.mse_loss(logits.view(-1), b_labels.view(-1).float())
+            if args.use_MSE_loss:
+                loss = F.mse_loss(logits.view(-1), b_labels.view(-1).float())
+            else:
+                loss = F.nll_loss(logits, b_labels.view(-1), reduction='sum') / args.batch_size
 
             loss.backward()
             optimizer.step()
@@ -339,8 +349,8 @@ def train(args):
 
         train_loss = train_loss / (num_batches)
 
-        train_acc, train_f1, *_ = model_eval(train_dataloader, model, device)
-        dev_acc, dev_f1, *_ = model_eval(dev_dataloader, model, device)
+        train_acc, train_f1, *_ = model_eval(train_dataloader, model, device, args)
+        dev_acc, dev_f1, *_ = model_eval(dev_dataloader, model, device, args)
 
         if dev_acc > best_dev_acc:
             best_dev_acc = dev_acc
@@ -370,8 +380,8 @@ def test(args):
         test_dataset = BertDataset(test_data, args)
         test_dataloader = DataLoader(test_dataset, shuffle=False, batch_size=args.batch_size, collate_fn=test_dataset.collate_fn)
 
-        dev_acc, dev_f1, dev_pred, dev_true, dev_sents = model_eval(dev_dataloader, model, device)
-        test_acc, test_f1, test_pred, test_true, test_sents = model_eval(test_dataloader, model, device)
+        dev_acc, dev_f1, dev_pred, dev_true, dev_sents = model_eval(dev_dataloader, model, device, args)
+        test_acc, test_f1, test_pred, test_true, test_sents = model_eval(test_dataloader, model, device, args)
 
         with open(args.dev_out, "w+") as f:
             print(f"dev acc :: {dev_acc :.3f}")
@@ -409,6 +419,7 @@ def get_args():
     parser.add_argument("--weight_decay", type=float, default=1e-5)
     parser.add_argument("--POS_tag_enabled", type=int, default=0)
     parser.add_argument("--dep_tag_enabled", type=int, default=0)
+    parser.add_argument("--use_MSE_loss", type=int, default=0)
 
     args = parser.parse_args()
     print(f"args: {vars(args)}")
