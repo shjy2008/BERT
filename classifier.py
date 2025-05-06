@@ -235,7 +235,7 @@ def model_eval(dataloader, model, device):
         logits = model(b_ids, b_mask, b_POS_tag_ids, b_dep_tag_ids)
         logits = logits.detach().cpu().numpy()
         preds = np.argmax(logits, axis=1).flatten()
-        # preds = np.clip(np.round(logits), 0, 4)
+        # preds = np.clip(np.round(logits).astype(int), 0, 4)
         preds = preds.flatten()
 
         b_labels = b_labels.flatten()
@@ -345,6 +345,7 @@ def train(args):
         if dev_acc > best_dev_acc:
             best_dev_acc = dev_acc
             save_model(model, optimizer, args, config, args.filepath)
+            test() # Test after saving the model with best result
 
         print(f"epoch {epoch}: train loss :: {train_loss :.3f}, train acc :: {train_acc :.3f}, dev acc :: {dev_acc :.3f}")
 
