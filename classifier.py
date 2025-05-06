@@ -319,11 +319,11 @@ def train(args):
     ## specify the optimizer
     optimizer = AdamW(model.parameters(), lr=lr, weight_decay=args.weight_decay)
 
-    # Scheduler with warmup
-    num_training_steps = args.epochs * len(train_dataloader)
-    num_warmup_steps = int(0.1 * num_training_steps)
-
-    lr_scheduler = transformers.get_scheduler(name="linear", optimizer=optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=num_training_steps)
+    if args.use_shceduler:
+        # Scheduler with warmup
+        num_training_steps = args.epochs * len(train_dataloader)
+        num_warmup_steps = int(0.1 * num_training_steps)
+        lr_scheduler = transformers.get_scheduler(name="linear", optimizer=optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=num_training_steps)
 
     ## run for the specified number of epochs
     for epoch in range(args.epochs):
@@ -352,7 +352,8 @@ def train(args):
 
             loss.backward()
             optimizer.step()
-            lr_scheduler.step()
+            if args.use_shceduler:
+                lr_scheduler.step()
 
             train_loss += loss.item()
             num_batches += 1
@@ -430,6 +431,7 @@ def get_args():
     parser.add_argument("--POS_tag_enabled", type=int, default=0)
     parser.add_argument("--dep_tag_enabled", type=int, default=0)
     parser.add_argument("--use_MSE_loss", type=int, default=0)
+    parser.add_argument("--use_shceduler", type=int, default=0)
 
     args = parser.parse_args()
     print(f"args: {vars(args)}")

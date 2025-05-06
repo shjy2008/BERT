@@ -46,6 +46,7 @@ python classifier.py \
     --POS_tag_enabled 0 \
     --dep_tag_enabled 1 \
     --use_MSE_loss 0 \
+    --use_shceduler 0 \
     --load_existing_model 1 \
     --do_training 0 \
     --seed 1234 \
