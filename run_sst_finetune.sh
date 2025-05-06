@@ -46,6 +46,7 @@ python classifier.py \
     --POS_tag_enabled 0 \
     --dep_tag_enabled 0 \
     --use_MSE_loss 0 \
+    --use_CORAL_loss 0 \
     --use_shceduler 0 \
     --load_existing_model 0 \
     --do_training 1 \

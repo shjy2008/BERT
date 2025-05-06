@@ -56,6 +56,8 @@ class BertSentClassifier(torch.nn.Module):
 
         if config.use_MSE_loss:
             num_output = 1 # Map to only 1 float number (0-1), can map to 0/1, or 0/1/2/3/4
+        elif config.use_CORAL_loss:
+            num_output = self.num_labels - 1
         else:
             num_output = self.num_labels
         self.classifier_layer = torch.nn.Linear(config.hidden_size, num_output) 
@@ -64,7 +66,7 @@ class BertSentClassifier(torch.nn.Module):
         # the final bert contextualize embedding is the hidden state of [CLS] token (the first token)
         bert_outputs = self.bert(input_ids, attention_mask, POS_tag_ids, dep_tag_ids)
         logits = self.classifier_layer(bert_outputs["pooler_output"])
-        if self.config.use_MSE_loss:
+        if self.config.use_MSE_loss or self.config.use_CORAL_loss:
             # logits = F.sigmoid(logits) * (self.num_labels - 1) # <0.125:0  <0.375:1  <0.625:2  < 0.875:3  >0.875:4
             return logits
         else:
@@ -246,6 +248,9 @@ def model_eval(dataloader, model, device, args):
         logits = logits.detach().cpu().numpy()
         if args.use_MSE_loss:
             preds = np.clip(np.round(logits).astype(int), 0, 4).flatten()
+        elif args.use_CORAL_loss:
+            probs = torch.sigmoid(logits)
+            preds = torch.sum(probs > 0.5, dim=1)
         else:
             preds = np.argmax(logits, axis=1).flatten()
 
@@ -272,6 +277,22 @@ def save_model(model, optimizer, args, config, filepath):
 
     torch.save(save_info, filepath)
     print(f"save the model to {filepath}")
+
+def coral_loss(logits, targets, num_classes=5):
+    # Create extended targets for each threshold
+    # If class is 3, then thresholds 0, 1, 2 are 1 (True) and 3, 4 are 0 (False)
+    levels = targets.size(0)
+    extended_targets = torch.zeros(levels, num_classes-1).to(targets.device)
+    
+    for i in range(levels):
+        for j in range(num_classes-1):
+            if targets[i] > j:  # If target class > threshold
+                extended_targets[i, j] = 1
+    
+    # Binary cross entropy for each threshold
+    loss = F.binary_cross_entropy_with_logits(
+        logits, extended_targets, reduction='mean')
+    return loss
 
 def train(args):
     device = torch.device('cuda') if (args.use_gpu and torch.cuda.is_available()) else torch.device('cpu')
@@ -309,7 +330,8 @@ def train(args):
                 'hidden_size': 768,
                 'data_dir': '.',
                 'option': args.option,
-                'use_MSE_loss': args.use_MSE_loss}
+                'use_MSE_loss': args.use_MSE_loss,
+                'use_CORAL_loss': args.use_CORAL_loss}
 
         config = SimpleNamespace(**config)
         model = BertSentClassifier(config)
@@ -348,6 +370,8 @@ def train(args):
             logits = model(b_ids, b_mask, b_POS_tag_ids, b_dep_tag_ids)
             if args.use_MSE_loss:
                 loss = F.mse_loss(logits.view(-1), b_labels.view(-1).float())
+            elif args.use_CORAL_loss:
+                loss = coral_loss(logits, b_labels, num_classes=num_labels)
             else:
                 loss = F.nll_loss(logits, b_labels.view(-1), reduction='sum') / args.batch_size
 
@@ -432,6 +456,7 @@ def get_args():
     parser.add_argument("--POS_tag_enabled", type=int, default=0)
     parser.add_argument("--dep_tag_enabled", type=int, default=0)
     parser.add_argument("--use_MSE_loss", type=int, default=0)
+    parser.add_argument("--use_CORAL_loss", type=int, default=1)
     parser.add_argument("--use_shceduler", type=int, default=0)
 
     args = parser.parse_args()
