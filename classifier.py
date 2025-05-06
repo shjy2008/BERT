@@ -345,7 +345,7 @@ def train(args):
         if dev_acc > best_dev_acc:
             best_dev_acc = dev_acc
             save_model(model, optimizer, args, config, args.filepath)
-            test() # Test after saving the model with best result
+            test(args) # Test after saving the model with best result
 
         print(f"epoch {epoch}: train loss :: {train_loss :.3f}, train acc :: {train_acc :.3f}, dev acc :: {dev_acc :.3f}")
 
