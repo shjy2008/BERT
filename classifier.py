@@ -305,7 +305,8 @@ def train(args):
                 'num_labels': num_labels,
                 'hidden_size': 768,
                 'data_dir': '.',
-                'option': args.option}
+                'option': args.option,
+                'use_MSE_loss': args.use_MSE_loss}
 
         config = SimpleNamespace(**config)
         model = BertSentClassifier(config)
