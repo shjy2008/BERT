@@ -55,14 +55,14 @@ class BertSentClassifier(torch.nn.Module):
                 param.requires_grad = True
         
         # Freeze the first "config.freeze_layers" layers
-        if config.freeze_layers:
+        if hasattr(config, 'freeze_layers') and config.freeze_layers:
             for name, param in self.bert.named_parameters():
                 if any(f"bert_layers.{i}." in name for i in range(config.freeze_layers)):
                     param.requires_grad = False
 
-        if config.use_MSE_loss:
+        if hasattr(config, 'use_MSE_loss') and config.use_MSE_loss:
             num_output = 1 # Map to only 1 float number (0-1), can map to 0/1, or 0/1/2/3/4
-        elif config.use_CORAL_loss:
+        elif hasattr(config, 'use_CORAL_loss') and config.use_CORAL_loss:
             num_output = self.num_labels - 1
         else:
             num_output = self.num_labels
@@ -72,7 +72,8 @@ class BertSentClassifier(torch.nn.Module):
         # the final bert contextualize embedding is the hidden state of [CLS] token (the first token)
         bert_outputs = self.bert(input_ids, attention_mask, POS_tag_ids, dep_tag_ids)
         logits = self.classifier_layer(bert_outputs["pooler_output"])
-        if self.config.use_MSE_loss or self.config.use_CORAL_loss:
+        if (hasattr(self.config, 'use_MSE_loss') and self.config.use_MSE_loss) or \
+            (hasattr(self.config, 'use_CORAL_loss') and self.config.use_CORAL_loss):
             # logits = F.sigmoid(logits) * (self.num_labels - 1) # <0.125:0  <0.375:1  <0.625:2  < 0.875:3  >0.875:4
             return logits
         else:
