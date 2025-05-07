@@ -351,7 +351,7 @@ def train(args):
     ## specify the optimizer
     optimizer = AdamW(model.parameters(), lr=lr, weight_decay=args.weight_decay)
 
-    if args.use_shceduler:
+    if args.use_scheduler:
         # Scheduler with warmup
         num_training_steps = args.epochs * len(train_dataloader)
         num_warmup_steps = int(0.1 * num_training_steps)
@@ -386,7 +386,7 @@ def train(args):
 
             loss.backward()
             optimizer.step()
-            if args.use_shceduler:
+            if args.use_scheduler:
                 lr_scheduler.step()
 
             train_loss += loss.item()
@@ -466,7 +466,7 @@ def get_args():
     parser.add_argument("--dep_tag_enabled", type=int, default=0)
     parser.add_argument("--use_MSE_loss", type=int, default=0)
     parser.add_argument("--use_CORAL_loss", type=int, default=1)
-    parser.add_argument("--use_shceduler", type=int, default=0)
+    parser.add_argument("--use_scheduler", type=int, default=0)
     parser.add_argument("--freeze_layers", type=int, help="how many BertLayers to freeze (0 - 12)", default=0)
 
     args = parser.parse_args()

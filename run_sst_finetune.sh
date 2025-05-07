@@ -47,7 +47,7 @@ python classifier.py \
     --dep_tag_enabled 0 \
     --use_MSE_loss 0 \
     --use_CORAL_loss 1 \
-    --use_shceduler 0 \
+    --use_scheduler 0 \
     --freeze_layers 0 \
     --load_existing_model 1 \
     --do_training 1 \

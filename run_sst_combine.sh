@@ -47,9 +47,9 @@ python classifier.py \
     --dep_tag_enabled 0 \
     --use_MSE_loss 0 \
     --use_CORAL_loss 1 \
-    --use_shceduler 0 \
+    --use_scheduler 0 \
     --freeze_layers 0 \
-    --load_existing_model 0 \
+    --load_existing_model 1 \
     --do_training 1 \
     --seed 1234 \
     --train "data_ext/${PREF}-train-ext-combine.txt" \
@@ -57,7 +57,7 @@ python classifier.py \
     --test "data/${PREF}-test.txt" \
     --dev_out "${PREF}-dev-output.txt" \
     --test_out "${PREF}-test-output.txt" \
-    --filepath "${PREF}-finetune-model.pt" | tee ${PREF}-train-log.txt
+    --filepath "${PREF}-finetune-model-base.pt" | tee ${PREF}-train-log.txt
     
 
 echo "my script has finished."
