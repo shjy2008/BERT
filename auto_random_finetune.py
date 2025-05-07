@@ -76,8 +76,19 @@ if __name__ == "__main__":
 
 
         command = build_command(finetune_model_path)
-        output = subprocess.check_output(command, shell = True, text = True)
-        results = json.loads(output)
+        process = subprocess.Popen(command, shell = True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text = True)
+
+        # Print the output as it's generated (line by line)
+        for line in process.stdout:
+            print(line, end='', flush=True)  # Flush to ensure immediate output
+
+        # handle stderr
+        stderr_output = process.stderr.read()
+        if stderr_output:
+            print(f"Error: {stderr_output}", flush=True)
+
+        process.wait()
+        results = json.loads(process.stdout.read())
 
         dev_acc = results["dev_acc"]
         test_acc = results["test_acc"]
