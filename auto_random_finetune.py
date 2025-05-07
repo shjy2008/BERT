@@ -1,6 +1,7 @@
 import random
 import subprocess
 import os
+import shutil
 
 PREF='sst'
 possible_params = {
@@ -60,6 +61,10 @@ for i in range(10):
     base_model_path = f"{PREF}-finetune-model-708k-epoch1.pt"
     finetune_model_path = f"random/{PREF}-finetune-model-{i}.pt"
     print (f"Copying from {base_model_path} to {finetune_model_path}")
+
+    os.makedirs(os.path.dirname(finetune_model_path), exist_ok = True)
+    shutil.copy(base_model_path, finetune_model_path)
+
 
     command = build_command(finetune_model_path)
     subprocess.call(command, shell = True)
