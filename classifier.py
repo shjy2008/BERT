@@ -318,10 +318,20 @@ def train(args):
 
     best_dev_acc = 0
 
+    config = {'hidden_dropout_prob': args.hidden_dropout_prob,
+            'num_labels': num_labels,
+            'hidden_size': 768,
+            'data_dir': '.',
+            'option': args.option,
+            'use_MSE_loss': args.use_MSE_loss,
+            'use_CORAL_loss': args.use_CORAL_loss,
+            'freeze_layers': args.freeze_layers}
+
     # initialize the Senetence Classification Model
     if args.load_existing_model and os.path.exists(args.filepath):
         saved = torch.load(args.filepath, weights_only=False, map_location=device)
-        config = saved['model_config']
+        # config = saved['model_config'] # No need to load previous config, otherwise the new config doesn't apply if further train a model
+        config = SimpleNamespace(**config)
         model = BertSentClassifier(config)
         model.load_state_dict(saved['model'])
         model = model.to(device)
@@ -332,15 +342,6 @@ def train(args):
         best_dev_acc = dev_acc
     else:
         #### Init model
-        config = {'hidden_dropout_prob': args.hidden_dropout_prob,
-                'num_labels': num_labels,
-                'hidden_size': 768,
-                'data_dir': '.',
-                'option': args.option,
-                'use_MSE_loss': args.use_MSE_loss,
-                'use_CORAL_loss': args.use_CORAL_loss,
-                'freeze_layers': args.freeze_layers}
-
         config = SimpleNamespace(**config)
         model = BertSentClassifier(config)
         model = model.to(device)
