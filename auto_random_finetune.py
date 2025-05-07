@@ -65,45 +65,18 @@ if __name__ == "__main__":
     best_round_test = 0
 
     for i in range(RANDOM_TRIES):
-        print (f"Round: {i}", flush=True)
+        # print (f"Round: {i}")
 
         base_model_path = f"{PREF}-finetune-model-708k-epoch1.pt"
-        finetune_model_path = f"random/{PREF}-finetune-model-{i}.pt"
-        print (f"Copying from {base_model_path} to {finetune_model_path}", flush=True)
+        finetune_model_path = f"random/{PREF}-finetune-model-708k-epoch1-{i}.pt"
+        # print (f"Copying from {base_model_path} to {finetune_model_path}")
 
         os.makedirs(os.path.dirname(finetune_model_path), exist_ok = True)
-        # shutil.copy(base_model_path, finetune_model_path)
+        shutil.copy(base_model_path, finetune_model_path)
 
 
         command = build_command(finetune_model_path)
-        process = subprocess.Popen(command, shell = True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text = True)
-
-        # Print the output as it's generated (line by line)
-        for line in process.stdout:
-            print(line, end='', flush=True)  # Flush to ensure immediate output
-
-        # handle stderr
-        stderr_output = process.stderr.read()
-        if stderr_output:
-            print(f"Error: {stderr_output}", flush=True)
-
-        process.wait()
-        results = json.loads(process.stdout.read())
-
-        dev_acc = results["dev_acc"]
-        test_acc = results["test_acc"]
-
-        # Get the best round
-        if dev_acc > best_dev_acc:
-            best_dev_acc = dev_acc
-            best_round_dev = i
-        
-        if test_acc > best_test_acc:
-            best_test_acc = test_acc
-            best_round_test = i
-        
-        print (f"The best dev_acc is {best_dev_acc} in round {best_round_dev}", flush=True)
-        print (f"The best test_acc is {best_test_acc} in round {best_round_test}", flush=True)
+        process = subprocess.call(command, shell = True)
 
 
 
