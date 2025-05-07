@@ -5,18 +5,19 @@ import shutil
 import json
 
 PREF='sst'
+RANDOM_TRIES = 50
 possible_params = {
     "lr": [5e-6, 1e-5, 2e-5, 5e-5],
     "epochs": [10],
     "batch_size": [4, 8, 16, 32],
     "hidden_dropout_prob": [0.1, 0.2, 0.3, 0.5],
     "weight_decay": [0, 0.1, 0.01, 0.001],
-    "POS_tag_enabled": [0],
-    "dep_tag_enabled": [0],
+    "POS_tag_enabled": [0, 1],
+    "dep_tag_enabled": [0, 1],
     "use_MSE_loss": [0],
     "use_CORAL_loss": [1],
     "use_scheduler": [0, 1],
-    "freeze_layers": [0],
+    "freeze_layers": [0, 6, 9],
     "load_existing_model": [1],
     "do_training": [1],
     "seed": [1234],
@@ -63,7 +64,7 @@ if __name__ == "__main__":
     best_round_dev = 0
     best_round_test = 0
 
-    for i in range(10):
+    for i in range(RANDOM_TRIES):
         print (f"Round: {i}", flush=True)
 
         base_model_path = f"{PREF}-finetune-model-708k-epoch1.pt"

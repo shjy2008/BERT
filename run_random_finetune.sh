@@ -14,7 +14,7 @@
 # #SBATCH --partition=aoraki_gpu_A100_80GB
 #SBATCH --gpus-per-node=1
 #SBATCH --mem=60GB
-#SBATCH --time=02:00:00
+#SBATCH --time=10:00:00
 
 # echo "hello world"
 
