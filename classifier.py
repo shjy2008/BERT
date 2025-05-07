@@ -53,6 +53,12 @@ class BertSentClassifier(torch.nn.Module):
                 param.requires_grad = False
             elif config.option == 'finetune':
                 param.requires_grad = True
+        
+        # Freeze the first "config.freeze_layers" layers
+        if config.freeze_layers:
+            for name, param in self.bert.named_parameters():
+                if any(f"bert_layers.{i}." in name for i in range(config.freeze_layers)):
+                    param.requires_grad = False
 
         if config.use_MSE_loss:
             num_output = 1 # Map to only 1 float number (0-1), can map to 0/1, or 0/1/2/3/4
@@ -331,7 +337,8 @@ def train(args):
                 'data_dir': '.',
                 'option': args.option,
                 'use_MSE_loss': args.use_MSE_loss,
-                'use_CORAL_loss': args.use_CORAL_loss}
+                'use_CORAL_loss': args.use_CORAL_loss,
+                'freeze_layers': args.freeze_layers}
 
         config = SimpleNamespace(**config)
         model = BertSentClassifier(config)
@@ -458,6 +465,7 @@ def get_args():
     parser.add_argument("--use_MSE_loss", type=int, default=0)
     parser.add_argument("--use_CORAL_loss", type=int, default=1)
     parser.add_argument("--use_shceduler", type=int, default=0)
+    parser.add_argument("--freeze_layers", type=int, help="how many BertLayers to freeze (0 - 12)", default=0)
 
     args = parser.parse_args()
     print(f"args: {vars(args)}")

@@ -48,6 +48,7 @@ python classifier.py \
     --use_MSE_loss 0 \
     --use_CORAL_loss 1 \
     --use_shceduler 0 \
+    --freeze_layers 0 \
     --load_existing_model 0 \
     --do_training 1 \
     --seed 1234 \
