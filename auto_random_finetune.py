@@ -2,6 +2,7 @@ import random
 import subprocess
 import os
 import shutil
+import json
 
 PREF='sst'
 possible_params = {
@@ -55,19 +56,44 @@ python classifier.py \
 
     return command
 
-for i in range(10):
-    print (f"Round: {i}")
 
-    base_model_path = f"{PREF}-finetune-model-708k-epoch1.pt"
-    finetune_model_path = f"random/{PREF}-finetune-model-{i}.pt"
-    print (f"Copying from {base_model_path} to {finetune_model_path}")
+if __name__ == "__main__":
+    best_dev_acc = 0
+    best_test_acc = 0
+    best_round_dev = 0
+    best_round_test = 0
 
-    os.makedirs(os.path.dirname(finetune_model_path), exist_ok = True)
-    shutil.copy(base_model_path, finetune_model_path)
+    for i in range(10):
+        print (f"Round: {i}", flush=True)
+
+        base_model_path = f"{PREF}-finetune-model-708k-epoch1.pt"
+        finetune_model_path = f"random/{PREF}-finetune-model-{i}.pt"
+        print (f"Copying from {base_model_path} to {finetune_model_path}", flush=True)
+
+        os.makedirs(os.path.dirname(finetune_model_path), exist_ok = True)
+        # shutil.copy(base_model_path, finetune_model_path)
 
 
-    command = build_command(finetune_model_path)
-    subprocess.call(command, shell = True)
+        command = build_command(finetune_model_path)
+        output = subprocess.check_output(command, shell = True, text = True)
+        results = json.loads(output)
+
+        dev_acc = results["dev_acc"]
+        test_acc = results["test_acc"]
+
+        # Get the best round
+        if dev_acc > best_dev_acc:
+            best_dev_acc = dev_acc
+            best_round_dev = i
+        
+        if test_acc > best_test_acc:
+            best_test_acc = test_acc
+            best_round_test = i
+        
+        print (f"The best dev_acc is {best_dev_acc} in round {best_round_dev}", flush=True)
+        print (f"The best test_acc is {best_test_acc} in round {best_round_test}", flush=True)
+
+
 
 
 

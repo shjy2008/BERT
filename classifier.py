@@ -7,6 +7,7 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import classification_report, f1_score, recall_score, accuracy_score
 
 import transformers
+import json
 
 # change it with respect to the original model
 from tokenizer import BertTokenizer
@@ -400,12 +401,12 @@ def train(args):
         if dev_acc > best_dev_acc:
             best_dev_acc = dev_acc
             save_model(model, optimizer, args, config, args.filepath)
-            test(args) # Test after saving the model with best result
+            test(args, test_set_only = True) # Test after saving the model with best result
 
         print(f"epoch {epoch}: train loss :: {train_loss :.3f}, train acc :: {train_acc :.3f}, dev acc :: {dev_acc :.3f}")
 
 
-def test(args):
+def test(args, test_set_only = False):
     if not os.path.exists(args.filepath):
         print(f"in test: filepath {args.filepath} not exists, return.")
         return
@@ -417,26 +418,37 @@ def test(args):
         model.load_state_dict(saved['model'])
         model = model.to(device)
         print(f"load model from {args.filepath}")
-        dev_data = create_data(args.dev, 'valid')
-        dev_dataset = BertDataset(dev_data, args)
-        dev_dataloader = DataLoader(dev_dataset, shuffle=False, batch_size=args.batch_size, collate_fn=dev_dataset.collate_fn)
+
+        results = {}
+
+        if not test_set_only:
+            dev_data = create_data(args.dev, 'valid')
+            dev_dataset = BertDataset(dev_data, args)
+            dev_dataloader = DataLoader(dev_dataset, shuffle=False, batch_size=args.batch_size, collate_fn=dev_dataset.collate_fn)
+
+            dev_acc, dev_f1, dev_pred, dev_true, dev_sents = model_eval(dev_dataloader, model, device, args)
+
+            with open(args.dev_out, "w+") as f:
+                print(f"dev acc :: {dev_acc :.3f}")
+                for s, t, p in zip(dev_sents, dev_true, dev_pred):
+                    f.write(f"{s} ||| {t} ||| {p}\n")
+            
+            results['dev_acc'] = dev_acc
 
         test_data = create_data(args.test, 'test')
         test_dataset = BertDataset(test_data, args)
         test_dataloader = DataLoader(test_dataset, shuffle=False, batch_size=args.batch_size, collate_fn=test_dataset.collate_fn)
 
-        dev_acc, dev_f1, dev_pred, dev_true, dev_sents = model_eval(dev_dataloader, model, device, args)
         test_acc, test_f1, test_pred, test_true, test_sents = model_eval(test_dataloader, model, device, args)
-
-        with open(args.dev_out, "w+") as f:
-            print(f"dev acc :: {dev_acc :.3f}")
-            for s, t, p in zip(dev_sents, dev_true, dev_pred):
-                f.write(f"{s} ||| {t} ||| {p}\n")
 
         with open(args.test_out, "w+") as f:
             print(f"test acc :: {test_acc :.3f}")
             for s, t, p in zip(test_sents, test_true, test_pred):
                 f.write(f"{s} ||| {t} ||| {p}\n")
+            
+        results['test_acc'] = test_acc
+    
+        return results
 
 
 def get_args():
@@ -473,7 +485,7 @@ def get_args():
     print(f"args: {vars(args)}")
     return args
 
-if __name__ == "__main__":
+def main():
     args = get_args()
     if args.filepath is None:
         #args.filepath = f'{args.option}-{args.epochs}-{args.lr}.pt' # save path
@@ -489,4 +501,9 @@ if __name__ == "__main__":
         train(args)
     print("---finish training---")
 
-    test(args)
+    results = test(args)
+    return results
+
+if __name__ == "__main__":
+    results = main()
+    print(json.dumps(results))
