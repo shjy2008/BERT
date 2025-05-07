@@ -39,7 +39,7 @@ python classifier.py \
     --use_gpu \
     --option finetune \
     --lr 1e-5 \
-    --epochs 3 \
+    --epochs 1 \
     --batch_size 8 \
     --hidden_dropout_prob 0.3 \
     --weight_decay 0 \
