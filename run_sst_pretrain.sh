@@ -46,10 +46,10 @@ python classifier.py \
     --POS_tag_enabled 0 \
     --dep_tag_enabled 1 \
     --use_MSE_loss 0 \
-    --use_CORAL_loss 0 \
+    --use_CORAL_loss 1 \
     --use_shceduler 0 \
     --load_existing_model 1 \
-    --do_training 0 \
+    --do_training 1 \
     --seed 1234 \
     --train "data/${PREF}-train.txt" \
     --dev "data/${PREF}-dev.txt" \
