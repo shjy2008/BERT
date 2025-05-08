@@ -15,6 +15,7 @@ import importlib_metadata
 import torch
 import torch.nn as nn
 from torch import Tensor
+import fnmatch
 
 #### VLJ: NOTHING TO CHANGE HERE FOR TASK 1 ####
 __version__ = "4.0.0"
