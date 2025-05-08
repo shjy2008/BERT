@@ -298,23 +298,26 @@ def coral_loss(logits, labels, num_classes=5):
                 extended_labels[i, j] = 1 # Create something like: # [[1, 1, 1, 1], [1, 1, 0, 0], ...]
 
     # Class weights
-    pos_weights = []
-    class_counts = {0: 122862, 1: 138704, 2: 484305, 3: 616273, 4: 1621061}
-    
-    for j in range(num_classes-1):
-        # Count samples above threshold j
-        pos_count = sum(class_counts[k] for k in range(j+1, num_classes))
-        # Count samples at or below threshold j
-        neg_count = sum(class_counts[k] for k in range(j+1))
+    if True:
+        pos_weights = None
+    else:
+        pos_weights = []
+        class_counts = {0: 122862, 1: 138704, 2: 484305, 3: 616273, 4: 1621061}
         
-        # Compute weight as ratio of negative to positive samples
-        if pos_count > 0:
-            weight = neg_count / (pos_count + 1e-8)
-        else:
-            weight = 1.0
-        pos_weights.append(weight)
+        for j in range(num_classes-1):
+            # Count samples above threshold j
+            pos_count = sum(class_counts[k] for k in range(j+1, num_classes))
+            # Count samples at or below threshold j
+            neg_count = sum(class_counts[k] for k in range(j+1))
+            
+            # Compute weight as ratio of negative to positive samples
+            if pos_count > 0:
+                weight = neg_count / (pos_count + 1e-8)
+            else:
+                weight = 1.0
+            pos_weights.append(weight)
 
-    pos_weights = torch.tensor(pos_weights).to(labels.device)
+        pos_weights = torch.tensor(pos_weights).to(labels.device)
 
     # Binary cross entropy for each threshold
     loss = F.binary_cross_entropy_with_logits(
@@ -500,6 +503,7 @@ def get_args():
     parser.add_argument("--use_CORAL_loss", type=int, default=1)
     parser.add_argument("--use_scheduler", type=int, default=0)
     parser.add_argument("--freeze_layers", type=int, help="how many BertLayers to freeze (0 - 12)", default=0)
+    # parser.add_argument("--class_weight_class_coumts", type=json.load, default='{"0": 122862, "1": 138704, "2": 484305, "3": 616273, "4": 1621061}')
 
     args = parser.parse_args()
     print(f"args: {vars(args)}")
