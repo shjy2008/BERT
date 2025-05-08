@@ -288,18 +288,38 @@ def save_model(model, optimizer, args, config, filepath):
     print(f"save the model to {filepath}")
 
 # CORAL (Cumulative Ordinal Regression Loss)
-def coral_loss(logits, targets, num_classes=5):
-    batch_size = targets.size(0)
-    extended_targets = torch.zeros(batch_size, num_classes-1).to(targets.device) # [[0, 0, 0, 0], [0, 0, 0, 0], ...]
+def coral_loss(logits, labels, num_classes=5):
+    batch_size = labels.size(0)
+    extended_labels = torch.zeros(batch_size, num_classes-1).to(labels.device) # [[0, 0, 0, 0], [0, 0, 0, 0], ...]
     
     for i in range(batch_size):
         for j in range(num_classes-1):
-            if targets[i] > j:
-                extended_targets[i, j] = 1 # Create something like: # [[1, 1, 1, 1], [1, 1, 0, 0], ...]
+            if labels[i] > j:
+                extended_labels[i, j] = 1 # Create something like: # [[1, 1, 1, 1], [1, 1, 0, 0], ...]
+
+    # Class weights
+    pos_weights = []
+    class_counts = {0: 122862, 1: 138704, 2: 484305, 3: 616273, 4: 1621061}
     
+    for j in range(num_classes-1):
+        # Count samples above threshold j
+        pos_count = sum(class_counts[k] for k in range(j+1, num_classes))
+        # Count samples at or below threshold j
+        neg_count = sum(class_counts[k] for k in range(j+1))
+        
+        # Compute weight as ratio of negative to positive samples
+        if pos_count > 0:
+            weight = neg_count / pos_count
+        else:
+            weight = 1.0
+        pos_weights.append(weight)
+
+    pos_weights = torch.tensor(pos_weights).to(labels.device)
+
     # Binary cross entropy for each threshold
     loss = F.binary_cross_entropy_with_logits(
-        logits, extended_targets, reduction='mean')
+        logits, extended_labels, reduction='mean',
+        pos_weight=pos_weights)
     return loss
 
 def train(args):
