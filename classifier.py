@@ -309,7 +309,7 @@ def coral_loss(logits, labels, num_classes=5):
         
         # Compute weight as ratio of negative to positive samples
         if pos_count > 0:
-            weight = neg_count / pos_count
+            weight = neg_count / (pos_count + 1e-8)
         else:
             weight = 1.0
         pos_weights.append(weight)
