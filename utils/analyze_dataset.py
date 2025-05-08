@@ -3,7 +3,10 @@ rate_to_count = {}
 
 max_length = 0
 
-with open('./data/sst-test.txt') as f:
+# path = './data/sst-test.txt'
+path = './data_ext/sst-train-ext-combine.txt'
+
+with open(path) as f:
     while True:
         line = f.readline()
         if line:

@@ -14,7 +14,7 @@
 # #SBATCH --partition=aoraki_gpu_A100_80GB
 #SBATCH --gpus-per-node=1
 #SBATCH --mem=60GB
-#SBATCH --time=10:00:00
+#SBATCH --time=02:00:00
 
 # echo "hello world"
 
@@ -37,27 +37,16 @@ echo "conda acticate LLM"
 PREF='sst'
 python classifier.py \
     --use_gpu \
-    --option finetune \
-    --lr 1e-5 \
-    --epochs 1 \
     --batch_size 8 \
-    --hidden_dropout_prob 0.3 \
-    --weight_decay 0 \
-    --POS_tag_enabled 0 \
-    --dep_tag_enabled 0 \
-    --use_MSE_loss 0 \
-    --use_CORAL_loss 1 \
-    --use_scheduler 0 \
-    --freeze_layers 0 \
     --load_existing_model 1 \
-    --do_training 1 \
+    --do_training 0 \
     --seed 1234 \
-    --train "data_ext/${PREF}-train-ext-combine.txt" \
+    --train "data/${PREF}-train.txt" \
     --dev "data/${PREF}-dev.txt" \
     --test "data/${PREF}-test.txt" \
     --dev_out "${PREF}-dev-output.txt" \
     --test_out "${PREF}-test-output.txt" \
-    --filepath "${PREF}-finetune-model-base.pt" | tee ${PREF}-train-log.txt
+    --filepath "random/saved/sst-finetune-model-563-581.pt" | tee ${PREF}-train-log.txt
     
 
 echo "my script has finished."
